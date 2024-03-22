@@ -123,11 +123,7 @@
                 console.log("Şu anki Tarih ve Saat: " + currentTime);
 
                 var pollEndTime = new Date(currentTime);
-                /* dakikalık için
-                var currentHours = pollEndTime.getHours();
-                var pollDurationInMinutes = 1;
-                pollEndTime.setMinutes(currentHours + pollDurationInMinutes);
-                */
+
                 pollEndTime.setHours(pollEndTime.getHours() + parseInt(pollDuration, 10));
 
 
@@ -147,7 +143,7 @@
                         start: selectedTimes[0].start,
                         end: selectedTimes[0].end,
                         allDay: false,
-                        className: 'poll-event'  // Anket etkinlik sınıfı
+                        className: 'poll-event' 
                     };
 
                     var event2 = {
@@ -157,7 +153,7 @@
                         start: selectedTimes[1].start,
                         end: selectedTimes[1].end,
                         allDay: false,
-                        className: 'poll-event'  // Anket etkinlik sınıfı
+                        className: 'poll-event' 
                     };
 
                     // Bağlantılı etkinlikleri kaydet
@@ -184,7 +180,7 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(eventPoll)  // Burada body parametresini kullanıyoruz
+                        body: JSON.stringify(eventPoll) 
                     });
 
                     if (response.ok) {

@@ -239,10 +239,10 @@ public class EventController : Controller
 
                 foreach (var ep in user.EventPolls)
                 {
-                    // İlk zaman dilimini temsil eden etkinliği oluştur
+                    // İlk zaman dilimini temsil eden anketi oluştur
                     eventPolls.Add(new { id = ep.Id, title = ep.Title, start = ep.StartTime1, end = ep.EndTime1 });
 
-                    // İkinci zaman dilimini temsil eden etkinliği oluştur
+                    // İkinci zaman dilimini temsil eden anketi oluştur
                     eventPolls.Add(new { id = ep.Id, title = ep.Title, start = ep.StartTime2, end = ep.EndTime2 });
                 }
 
