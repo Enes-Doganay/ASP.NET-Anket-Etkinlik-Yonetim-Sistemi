@@ -1,0 +1,33 @@
+@model EventPoll
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 my-5">
+            <div class="card py-3">
+                <div class="card-body">
+                    <h1 class="display-4 text-center">@Model.Title</h1>
+                    <p class="lead">@Model.Description</p>
+                    <p><strong>Location:</strong> @Model.Location</p>
+
+                    <form method="post" action="/Event/JoinEventPoll" class="needs-validation" novalidate>
+                        <input type="hidden" name="pollId" value="@Model.Id" />
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="option1" name="option" value="1" required />
+                            <label class="form-check-label" for="option1">@Model.StartTime1.ToString() -
+                                @Model.EndTime1.ToString()</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="option2" name="option" value="2" required />
+                            <label class="form-check-label" for="option2">@Model.StartTime2.ToString() -
+                                @Model.EndTime2.ToString()</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary mt-3">Oyla</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,32 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin: 0px;
+}
+
+.normal-event {
+  background-color: #3498db;
+  /* Mavi renk */
+  color: #ffffff;
+  /* Beyaz renk */
+}
+
+.poll-event {
+  background-color: #e67e22;
+  /* Turuncu renk */
+  color: #ffffff;
+  /* Beyaz renk */
+}

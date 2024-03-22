@@ -1,0 +1,13 @@
+@if (User.Identity.IsAuthenticated)
+{
+    <div class="d-flex">
+        <a class="btn btn-outline-primary me-4" asp-area="" asp-controller="Account" asp-route-control="@Context.Request.Path" asp-action="Logout">Çıkış Yap</a>
+    </div>
+}
+else
+{
+    <div class="d-flex">
+        <a class="btn btn-outline-primary me-4" asp-controller="Account" asp-route-control="@Context.Request.Path" asp-action="Login">Giriş Yap</a>
+        <a class="btn btn-outline-primary" asp-controller="Account" asp-action="Signup">Kayıt Ol</a>
+    </div>
+}

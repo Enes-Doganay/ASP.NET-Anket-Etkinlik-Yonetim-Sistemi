@@ -1,0 +1,306 @@
+@model EventPoll
+
+@{
+    ViewData["Title"] = "Event";
+}
+
+@section scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var calendarEl = document.getElementById('calendar');
+            var selectedDate;
+            var selectedTimes = [];
+            var linkedEvents = {}; // Bağlantılı etkinlikleri yönetmek için nesne
+            var eventIdCounter = 1; // Her etkinlik için benzersiz id üretmek için sayaç
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                locale: 'tr',
+                initialView: 'dayGridMonth',
+                selectable: true,
+                eventSources: [
+                    {
+                        url: '/Event/GetUserEvents',
+                        method: 'GET',
+                        success: function (events) {
+                            console.log('Etkinlikler:', JSON.stringify(events, null, 2));
+                            events.forEach(function (event) {
+                                event.className = 'normal-event'; // Sınıf tanımlaması
+                            });
+                            return events; // Bu satırı ekleyin
+                        },
+                        error: function () {
+                            console.log('Etkinlikler yüklenirken bir hata oluştu!');
+                        },
+                    },
+                    {
+                        url: '/Event/GetUserEventPolls',
+                        method: 'GET',
+                        success: function (eventPolls) {
+                            console.log('Anketler:', JSON.stringify(eventPolls, null, 2));
+                            eventPolls.forEach(function (eventPoll) {
+                                eventPoll.className = 'poll-event'; // Sınıf tanımlaması
+                            });
+                            return eventPolls; // Bu satırı ekleyin
+                        },
+                        error: function () {
+                            console.log('Anketler yüklenirken bir hata oluştu!');
+                        },
+                    }
+                ],
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    meridiem: false
+                },
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                }
+            });
+
+            calendar.render();
+
+
+            // Sayfa yüklendiğinde formu gizle
+            document.getElementById('event-form').style.display = 'none';
+
+            calendar.on('dateClick', function (info) {
+                selectedDate = info.date;
+                if (calendar.view.type === 'timeGridWeek' || calendar.view.type === 'timeGridDay') {
+                    updateAndShowEventForm();
+                } else if (calendar.view.type === 'dayGridMonth') {
+                    calendar.changeView('timeGridDay', selectedDate);
+                }
+            });
+
+            calendar.on('eventClick', function (info) {
+                var deleteEvent = confirm("Etkinliği silmek istediğinize emin misiniz?");
+                if (deleteEvent) {
+                    removeLinkedEvent(info.event);
+                    info.event.remove();
+                }
+            });
+
+            calendar.on('select', function (info) {
+
+                if (calendar.view.type === 'dayGridMonth')
+                    return;
+
+                selectedTimes.push({
+                    start: info.start,
+                    end: info.end
+                });
+
+                if (selectedTimes.length === 1) {
+                    document.getElementById('start-time-1').value = formatDate(selectedTimes[0].start);
+                    document.getElementById('end-time-1').value = formatDate(selectedTimes[0].end);
+                } else if (selectedTimes.length === 2) {
+                    document.getElementById('start-time-2').value = formatDate(selectedTimes[1].start);
+                    document.getElementById('end-time-2').value = formatDate(selectedTimes[1].end);
+                    updateAndShowEventForm();
+                }
+            });
+
+            function formatDate(date) {
+                var hours = padZero(date.getHours());
+                var minutes = padZero(date.getMinutes());
+
+                return `${hours}:${minutes}`;
+            }
+
+            function padZero(number) {
+                return number < 10 ? '0' + number : number;
+            }
+            document.getElementById('save-event-btn').addEventListener('click', async function () {
+                var title = document.getElementById('event-title').value;
+                var description = document.getElementById('event-description').value;
+                var location = document.getElementById('location').value;
+                var pollDuration = document.getElementById('poll-duration').value;
+
+                var currentTime = new Date();
+                console.log("Şu anki Tarih ve Saat: " + currentTime);
+
+                var pollEndTime = new Date(currentTime);
+                /* dakikalık için
+                var currentHours = pollEndTime.getHours();
+                var pollDurationInMinutes = 1;
+                pollEndTime.setMinutes(currentHours + pollDurationInMinutes);
+                */
+                pollEndTime.setHours(pollEndTime.getHours() + parseInt(pollDuration, 10));
+
+
+                console.log("endtime : " + pollEndTime);
+
+                // Seçilen saat aralıklarını kontrol et
+                if (selectedTimes.length >= 2) {
+                    console.log("Etkinlik 1 - Başlangıç Saati: " + selectedTimes[0].start + " | Bitiş Saati: " + selectedTimes[0].end);
+                    console.log("Etkinlik 2 - Başlangıç Saati: " + selectedTimes[1].start + " | Bitiş Saati: " + selectedTimes[1].end);
+
+                    // Etkinlik nesnelerini oluşturun
+                    var event1 = {
+                        id: 'event-' + eventIdCounter++,
+                        title: title,
+                        description: description,
+                        location: location,
+                        start: selectedTimes[0].start,
+                        end: selectedTimes[0].end,
+                        allDay: false,
+                        className: 'poll-event'  // Anket etkinlik sınıfı
+                    };
+
+                    var event2 = {
+                        id: 'event-' + eventIdCounter++,
+                        title: title,
+                        description: description,
+                        start: selectedTimes[1].start,
+                        end: selectedTimes[1].end,
+                        allDay: false,
+                        className: 'poll-event'  // Anket etkinlik sınıfı
+                    };
+
+                    // Bağlantılı etkinlikleri kaydet
+                    linkEvents(event1, event2);
+
+                    // Etkinlikleri takvime ekleyin
+                    calendar.addEvent(event1);
+                    calendar.addEvent(event2);
+
+                    // Etkinlik anketini sunucuya gönder
+                    var eventPoll = {
+                        Title: title,
+                        Description: description,
+                        Location: location,
+                        StartTime1: selectedTimes[0].start,
+                        EndTime1: selectedTimes[0].end,
+                        StartTime2: selectedTimes[1].start,
+                        EndTime2: selectedTimes[1].end,
+                        PollEndTime: pollEndTime,
+                    };
+
+                    var response = await fetch('/Event/CreatePoll', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(eventPoll)  // Burada body parametresini kullanıyoruz
+                    });
+
+                    if (response.ok) {
+                        console.log('Etkinlik anketi başarıyla oluşturuldu');
+                    } else {
+                        console.error('Etkinlik anketi oluşturulamadı:', response.status, response.statusText, await response.text());
+                    }
+
+                    document.getElementById('event-form').style.display = 'none';
+                    selectedTimes = [];
+                } else {
+                    // Eğer selectedTimes dizisi boşsa, kullanıcıya bir hata mesajı gösterin veya başka bir işlem yapın.
+                    alert("Hata: Lütfen geçerli iki saat aralığı seçin.");
+                }
+
+            });
+
+            function linkEvents(event1, event2) {
+                linkedEvents[event1.id] = event2.id;
+                linkedEvents[event2.id] = event1.id;
+            }
+
+            function removeLinkedEvent(event) {
+                var linkedEventId = linkedEvents[event.id];
+                if (linkedEventId) {
+                    var linkedEvent = calendar.getEventById(linkedEventId);
+                    if (linkedEvent) {
+                        linkedEvent.remove();
+                        delete linkedEvents[event.id];
+                        delete linkedEvents[linkedEventId];
+                    }
+                }
+            }
+
+            function updateAndShowEventForm() {
+                document.getElementById('event-form').style.display = 'block';
+            }
+
+            calendar.setOption('eventContent', function (arg) {
+                var startTimeStr = formatDate(arg.event.start);
+                var endTimeStr = formatDate(arg.event.end);
+                var title = arg.event.title;
+                if (title.length > 10) {
+                    title = title.substring(0, 10) + '...';
+                }
+                if (calendar.view.type === 'dayGridMonth') {
+                    return { html: '<div>' + startTimeStr + ' - ' + endTimeStr + ' </div><div><b>' + title + '</b></div>' };
+                } else {
+                    return { html: '<div><b>' + title + '</b></div>' };
+                }
+            });
+
+        });
+    </script>
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <p class="text-danger">
+                Bir tarih ve iki saat aralığı seçtikten sonra formdan etkinlik bilgilerini girin ve etkinlik
+                için anket oluşturun.
+            </p>
+            <div class="d-flex gap-3">
+                <span>Anket Rengi</span>
+                <div class="poll-event" style="width: 60px; height: 20px;"></div>
+                <span>Etkinlik Rengi</span>
+                <div class="normal-event" style="width: 60px; height: 20px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <form class="py-3">
+                <div id="event-form">
+                    <div class="mb-3">
+                        <label for="event-title" class="form-label">Etkinlik Adı: </label>
+                        <input type="text" class="form-control" id="event-title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="event-description" class="form-label">Açıklama: </label>
+                        <textarea class="form-control" id="event-description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Konum: </label>
+                        <input type="text" class="form-control" id="location" rows="3"></input>
+                    </div>
+                    <div class="mb-3">
+                        <label for="start-time-1" class="form-label">Başlangıç Saati 1: </label>
+                        <input type="time" class="form-control" id="start-time-1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="end-time-1" class="form-label">Bitiş Saati 1: </label>
+                        <input type="time" class="form-control" id="end-time-1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="start-time-2" class="form-label">Başlangıç Saati 2: </label>
+                        <input type="time" class="form-control" id="start-time-2">
+                    </div>
+                    <div class="mb-3">
+                        <label for="end-time-2" class="form-label">Bitiş Saati 2: </label>
+                        <input type="time" class="form-control" id="end-time-2">
+                    </div>
+                    <div class="mb-3">
+                        <label for="poll-duration" class="form-label">Anket Süresi (saat): </label>
+                        <input type="number" class="form-control" id="poll-duration">
+                    </div>
+                    <button id="save-event-btn" type="button" class="btn btn-primary">Etkinliği Kaydet</button>
+                </div>
+            </form>
+
+            <div id="calendar"></div>
+
+        </div>
+    </div>
+</div>
